@@ -1,4 +1,4 @@
-﻿using IaBak.Models;
+using IaBak.Models;
 using Newtonsoft.Json;
 using Shaman.Types;
 using System;
@@ -22,8 +22,7 @@ namespace IaBak.Client
         {
             ApplicationDirectory = GetApplicationPath();
 
-
-            ConfigFilePath = Path.Combine(ApplicationDirectory, "Configuration.json");
+            ConfigFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "IaBak-sharp", "Configuration.json");
             if (!File.Exists(ConfigFilePath))
             {
                 await UserRegistrationAsync();
@@ -57,7 +56,7 @@ namespace IaBak.Client
                 {
                     WriteLog(@$"Not syncing any other items, because less than {new FileSize(thresholdBytes)} are left on disk {rootDrive}.
 To reduce the amount of reserved space, edit Configuration.json.
-To use more drives, run multiple copies of the application on different drives (or use a RAID system).");
+Saving to multiple drives is not currently supported.");
                     config.LastSync = now;
                     SaveConfig();
                     continue;
@@ -78,6 +77,7 @@ To use more drives, run multiple copies of the application on different drives (
 
         private static void SaveConfig()
         {
+            Directory.CreateDirectory(Path.GetDirectoryName(ConfigFilePath));
             File.WriteAllText(ConfigFilePath, JsonConvert.SerializeObject(UserConfiguration, Formatting.Indented));
         }
 
