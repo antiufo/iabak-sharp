@@ -1,4 +1,4 @@
-using IaBak.Models;
+﻿using IaBak.Models;
 using Newtonsoft.Json;
 using Shaman.Types;
 using System;
@@ -13,14 +13,16 @@ using System.Xml.Linq;
 
 namespace IaBak.Client
 {
-    class Program
+    static class Program
     {
 
-        public Configuration UserConfiguration;
+        public static Configuration UserConfiguration;
 
         static async Task Main(string[] args)
         {
-            ApplicationDirectory = Path.GetDirectoryName(typeof(Program).Assembly.Location);
+            ApplicationDirectory = GetApplicationPath();
+
+
             ConfigFilePath = Path.Combine(ApplicationDirectory, "Configuration.json");
             if (!File.Exists(ConfigFilePath))
             {
@@ -28,20 +30,77 @@ namespace IaBak.Client
             }
 
             var config = JsonConvert.DeserializeObject<Configuration>(File.ReadAllText(ConfigFilePath));
+            UserConfiguration = config;
 
             StagingFolder = Path.Combine(config.Directory, "staging");
             DataFolder = Path.Combine(config.Directory, "data");
 
             Directory.CreateDirectory(StagingFolder);
             Directory.CreateDirectory(DataFolder);
+            var rootDrive = GetParentDrive(DataFolder).RootDirectory.FullName;
+            while (true)
+            {
+                var now = DateTime.UtcNow;
+                if (config.LastSync > now) config.LastSync = default;
+                var nextSync = config.LastSync.AddMinutes(10);
+                if (nextSync > now)
+                {
+                    var delay = nextSync - now;
+                    WriteLog($"Next sync in {delay.TotalMinutes:0} minutes.");
+                    await Task.Delay(delay);
+                }
+                WriteLog("Syncing...");
+
+                var avail = new DriveInfo(rootDrive).AvailableFreeSpace;
+                var thresholdBytes = (long)(config.LeaveFreeGb * 1024 * 1024 * 1024);
+                if (avail < thresholdBytes)
+                {
+                    WriteLog(@$"Not syncing any other items, because less than {new FileSize(thresholdBytes)} are left on disk {rootDrive}.
+To reduce the amount of reserved space, edit Configuration.json.
+To use more drives, run multiple copies of the application on different drives (or use a RAID system).");
+                    config.LastSync = now;
+                    SaveConfig();
+                    continue;
+                }
 
 
+                //RpcAsync(new SyncRequest {  })
+
+                SaveConfig();
+            }
 
             await DownloadItemAsync(
                 "Topolino1412"
                 //"archiveteam_archivebot_go_20190313130002"
                 //"archiveteam_archivebot_go_20200227040015"
                 );
+        }
+
+        private static void SaveConfig()
+        {
+            File.WriteAllText(ConfigFilePath, JsonConvert.SerializeObject(UserConfiguration, Formatting.Indented));
+        }
+
+        private static DriveInfo GetParentDrive(string folder)
+        {
+            return DriveInfo.GetDrives()
+                .OrderByDescending(x => x.RootDirectory.FullName)
+                .First(x => folder.StartsWith(x.RootDirectory.FullName));
+        }
+
+        private static string GetApplicationPath()
+        {
+            var path = Path.GetDirectoryName(typeof(Program).Assembly.Location);
+
+            string currentDir = path;
+            while (true)
+            {
+                currentDir = Path.GetDirectoryName(currentDir);
+                if (currentDir == null) break;
+                if (Directory.Exists(Path.Combine(currentDir, ".git"))) return currentDir;
+            }
+
+            return path;
         }
 
         private async static Task UserRegistrationAsync()
@@ -100,7 +159,7 @@ namespace IaBak.Client
             });
 
             config.UserId = response.AssignedUserId;
-            File.WriteAllText(ConfigFilePath, JsonConvert.SerializeObject(config, Formatting.Indented));
+            SaveConfig();
 
             Console.WriteLine();
             Console.WriteLine($"Thank you. If you want to modify these settings in the future, edit '{ConfigFilePath}'.");

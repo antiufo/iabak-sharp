@@ -3,4 +3,5 @@ obj/
 *.suo
 .vs/
 IaBak.Server/IaBakServer.sqlite
+Configuration.json
 
