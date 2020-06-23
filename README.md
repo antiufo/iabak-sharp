@@ -7,10 +7,14 @@ A C# implementation for the [INTERNETARCHIVE.BAK](https://www.archiveteam.org/in
 * [X] Retrieval of items from IA
 * [X] Hash consistency checks
 * [X] Settings initialization
-* [ ] Server and job assignment
+* [X] Server
+* [X] User registration
+* [X] Disk space checks
+* [ ] Job assignment
 * [ ] Cronjob
 * [ ] Self-update
-* [ ] Proving storage of an item
+* [ ] Prove storage of items (hash range challange)
+* [ ] Encryption support (non-public items)
 
 ## Supported OSes
 Supports Linux, Windows and macOS. Command line application only, no GUI.
