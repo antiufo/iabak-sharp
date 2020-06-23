@@ -159,6 +159,7 @@ Saving to multiple drives is not currently supported.");
             });
 
             config.UserId = response.AssignedUserId;
+            UserConfiguration = config;
             SaveConfig();
 
             Console.WriteLine();
