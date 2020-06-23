@@ -1,4 +1,4 @@
-﻿using IaBak.Models;
+using IaBak.Models;
 using Newtonsoft.Json;
 using Shaman.Types;
 using System;
@@ -86,12 +86,20 @@ namespace IaBak.Client
             {
                 UserEmail = email,
                 Nickname = nickname,
-                UserId = Guid.NewGuid().ToString(),
                 UserSecretKey = GenerateSecretKey(),
                 Directory = customDir,
                 LeaveFreeGb = customLeaveFree
             };
+
             Directory.CreateDirectory(config.Directory);
+            var response = await RpcAsync<RegistrationResponse>(new RegistrationRequest
+            {
+                Email = config.UserEmail,
+                Nickname = config.Nickname,
+                SecretKey = config.UserSecretKey,
+            });
+
+            config.UserId = response.AssignedUserId;
             File.WriteAllText(ConfigFilePath, JsonConvert.SerializeObject(config, Formatting.Indented));
 
             Console.WriteLine();
@@ -119,7 +127,20 @@ namespace IaBak.Client
         public static string ConfigFilePath;
         public static string ApplicationDirectory;
         private readonly static HttpClient httpClient = new HttpClient();
+        private static string ApiEndpoint = "http://localhost:5000/iabak";
 
+        public static async Task<TResponse> RpcAsync<TResponse>(RequestBase request) where TResponse : ResponseBase
+        {
+            var method = request.GetType().Name;
+            if (!method.EndsWith("Request")) throw new ArgumentException();
+            method = method.Substring(0, method.Length - "Request".Length);
+            var httpResponse = await httpClient.PostAsync(ApiEndpoint + "/" + method, new StringContent(JsonConvert.SerializeObject(request), Encoding.UTF8, "application/json"));
+            httpResponse.EnsureSuccessStatusCode();
+
+            var response = JsonConvert.DeserializeObject<TResponse>(await httpResponse.Content.ReadAsStringAsync());
+            if (response.Error != null) throw new Exception(response.Error);
+            return response;
+        }
 
 
         public static async Task DownloadItemAsync(string identifier)

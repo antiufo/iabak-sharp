@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30114.128
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IaBak.Client", "IaBak.Client\IaBak.Client.csproj", "{4E1DE00C-1EF4-4CE9-9AC7-C7989963FB90}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IaBak.Server", "IaBak.Server\IaBak.Server.csproj", "{1D4E5715-033F-4214-A777-01859C45EB7C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4E1DE00C-1EF4-4CE9-9AC7-C7989963FB90}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4E1DE00C-1EF4-4CE9-9AC7-C7989963FB90}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4E1DE00C-1EF4-4CE9-9AC7-C7989963FB90}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4E1DE00C-1EF4-4CE9-9AC7-C7989963FB90}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1D4E5715-033F-4214-A777-01859C45EB7C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1D4E5715-033F-4214-A777-01859C45EB7C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1D4E5715-033F-4214-A777-01859C45EB7C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1D4E5715-033F-4214-A777-01859C45EB7C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {232D4B98-FDA0-44B1-ACC3-B6551CFD9477}
+	EndGlobalSection
+EndGlobal
