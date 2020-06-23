@@ -221,6 +221,12 @@ Saving to multiple drives is not currently supported.");
             {
                 await DownloadFileToStagingAsync(identifier, item.name, item);
             }
+            foreach (var item in nonDerivative)
+            {
+                // So that we detect if the user manually deletes (parts of) the staging folder.
+                if (!File.Exists(Path.Combine(itemStagingDir, item.name)))
+                    throw new Exception($"File '{item.name}' disappeared from '{itemStagingDir}' before the item could be fully downloaded.");
+            }
             Directory.Move(itemStagingDir, itemDoneDir);
             WriteLog($"Download of {identifier} completed.");
         }
