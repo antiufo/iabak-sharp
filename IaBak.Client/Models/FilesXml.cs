@@ -31,6 +31,7 @@ namespace IaBak.Models
         [XmlElement] public string sha1 { get; set; }
         [XmlElement] public string format { get; set; }
         [XmlElement] public string original { get; set; }
+        [XmlElement] public bool? @private { get; set; }
 
         [XmlAttribute] public string name { get; set; }
         [XmlAttribute] public string source { get; set; }

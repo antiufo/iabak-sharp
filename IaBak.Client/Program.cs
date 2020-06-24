@@ -215,6 +215,8 @@ Saving to multiple drives is not currently supported.");
             await DownloadFileToStagingAsync(identifier, filesXml, null);
 
             var files = ReadFilesXml(Path.Combine(itemStagingDir, filesXml));
+            if (files.files.Any(x => x.@private == true))
+                throw new Exception($"Unable to download item '{identifier}', because one or more files in it are non-public.");
             var nonDerivative = files.files.Where(x => x.source != "derivative").ToList();
             WriteLog($"Size of {identifier}: {new FileSize(nonDerivative.Sum(x => x.size ?? 0))}");
             foreach (var item in nonDerivative)
