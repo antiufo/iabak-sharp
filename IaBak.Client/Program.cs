@@ -24,6 +24,17 @@ namespace IaBak.Client
             IaBakVersion = typeof(Program).Assembly.GetName().Version;
             WriteLog("IaBak-sharp " + IaBakVersion);
 
+            if (args.Contains("--version"))
+            {
+                Console.WriteLine(IaBakVersion);
+                return;
+            }
+            if (args.Contains("--help"))
+            {
+                Console.WriteLine("For help, see https://github.io/antiufo/iabak-sharp.");
+                return;
+            }
+
             ConfigFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "IaBak-sharp", "Configuration.json");
             if (!File.Exists(ConfigFilePath))
             {
@@ -128,9 +139,14 @@ Saving to multiple drives is not currently supported.");
 
 
 
-                var psi = Process.Start(location);
-                psi.WaitForExit();
-                Environment.Exit(psi.ExitCode);
+                var psi = new ProcessStartInfo(location);
+                foreach (var item in Environment.GetCommandLineArgs().Skip(1))
+                {
+                    psi.ArgumentList.Add(item);
+                }
+                var ps = Process.Start(psi);
+                ps.WaitForExit();
+                Environment.Exit(ps.ExitCode);
             }
             catch (Exception ex)
             {
