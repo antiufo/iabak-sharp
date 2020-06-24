@@ -4,6 +4,7 @@ A C# implementation for the [INTERNETARCHIVE.BAK](https://www.archiveteam.org/in
 
 ## Project status
 
+### First release
 * [X] Retrieval of items from IA
 * [X] Hash consistency checks
 * [X] Settings initialization
@@ -13,10 +14,14 @@ A C# implementation for the [INTERNETARCHIVE.BAK](https://www.archiveteam.org/in
 * [ ] Job assignment
 * [ ] Cronjob
 * [ ] Self-update
+
+### Future improvements
 * [ ] Prove storage of items (hash range challange)
 * [ ] Encryption support (non-public items)
+* [ ] Support more file retrieval mechanisms (eg. ipfs/torrent?)
+* [ ] Local import of iabak git-annex items?
 
 ## Supported OSes
-Supports Linux, Windows and macOS. Command line application only, no GUI.
+Supports Windows, Linux. Command line application only, no GUI.
 
 
