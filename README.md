@@ -11,11 +11,11 @@ A C# implementation for the [INTERNETARCHIVE.BAK](https://www.archiveteam.org/in
 * [X] Server
 * [X] User registration
 * [X] Disk space checks
+* [X] Self-update
 * [ ] Job assignment
-* [ ] Cronjob
-* [ ] Self-update
 
 ### Future improvements
+* [ ] Cronjob
 * [ ] Prove storage of items (hash range challange)
 * [ ] Encryption support (non-public items)
 * [ ] Support more file retrieval mechanisms (eg. ipfs/torrent?)
