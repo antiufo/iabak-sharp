@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -34,7 +34,7 @@ namespace IaBak.Models
         public List<string> LostItems { get; set; }
     }
 
-    public class SyncResponse : RequestBase 
+    public class SyncResponse : ResponseBase 
     {
         public List<ItemDownloadSuggestion> DownloadSuggestions { get; set; }
     }
