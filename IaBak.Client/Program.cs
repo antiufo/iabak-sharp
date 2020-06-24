@@ -283,6 +283,30 @@ Saving to multiple drives is not currently supported.");
         }
 
 
+        public static async Task TryDownloadItemAsync(string identifier)
+        {
+           
+            try
+            {
+                await DownloadItemAsync(identifier);
+            }
+            catch (Exception ex)
+            {
+                WriteLog($"Failed download for {identifier}: " + GetInnermostException(ex));
+            }
+        }
+
+      
+
+        private static Exception GetInnermostException(Exception ex)
+        {
+            while (ex.InnerException != null)
+            {
+                ex = ex.InnerException;
+            }
+            return ex;
+        }
+
         public static async Task DownloadItemAsync(string identifier)
         {
             var itemStagingDir = Path.Combine(StagingFolder, identifier);
@@ -296,18 +320,18 @@ Saving to multiple drives is not currently supported.");
 
             var files = ReadFilesXml(Path.Combine(itemStagingDir, filesXml));
             if (files.files.Any(x => x.@private == true))
-                throw new Exception($"Unable to download item '{identifier}', because one or more files in it are non-public.");
+                throw new Exception($"Unable to download the item, because one or more files in it are not public.");
             var nonDerivative = files.files.Where(x => x.source != "derivative").ToList();
             WriteLog($"Size of {identifier}: {new FileSize(nonDerivative.Sum(x => x.size ?? 0))}");
             foreach (var item in nonDerivative)
             {
-                await DownloadFileToStagingAsync(identifier, item.name, item);
+                await RetryDownloadFileToStagingAsync(identifier, item.name, item);
             }
             foreach (var item in nonDerivative)
             {
-                // So that we detect if the user manually deletes (parts of) the staging folder.
+                // So that we detect if the user manually deletes the staging folder while we continue to download the rest of the item.
                 if (!File.Exists(Path.Combine(itemStagingDir, item.name)))
-                    throw new Exception($"File '{item.name}' disappeared from '{itemStagingDir}' before the item could be fully downloaded.");
+                    throw new Exception("One or more of the previously downloaded files was subsequentially found to be missing. Aborting download of the current item.");
             }
             Directory.Move(itemStagingDir, itemDoneDir);
             WriteLog($"Download of {identifier} completed.");
@@ -319,6 +343,31 @@ Saving to multiple drives is not currently supported.");
             using var stream = File.Open(path, FileMode.Open);
             return (FilesXml)ser.Deserialize(stream);
         }
+
+        public static async Task RetryDownloadFileToStagingAsync(string archiveItem, string relativePath, FileXml metadata)
+        {
+            var delay = 10;
+            var attempts = 0;
+            while (true)
+            {
+                attempts++;
+                try
+                {
+                    await DownloadFileToStagingAsync(archiveItem, relativePath, metadata);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    WriteLog($"Download failed for {archiveItem}/{relativePath}: " + GetInnermostException(ex));
+
+                    if (attempts == 10) throw;
+                    
+                    WriteLog($"Retrying in {delay} seconds.");
+                    delay *= 2;
+                }
+            }
+        }
+
 
         public static async Task DownloadFileToStagingAsync(string archiveItem, string relativePath, FileXml metadata)
         {
