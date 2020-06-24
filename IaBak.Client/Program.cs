@@ -21,10 +21,13 @@ namespace IaBak.Client
         static async Task Main(string[] args)
         {
             ApplicationDirectory = GetApplicationPath();
+            IaBakVersion = typeof(Program).Assembly.GetName().Version;
+            WriteLog("IaBak-sharp " + IaBakVersion);
 
             ConfigFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "IaBak-sharp", "Configuration.json");
             if (!File.Exists(ConfigFilePath))
             {
+                await CheckForUpdatesAsync();
                 await UserRegistrationAsync();
             }
 
@@ -41,6 +44,13 @@ namespace IaBak.Client
             {
                 var now = DateTime.UtcNow;
                 if (config.LastSync > now) config.LastSync = default;
+                if (config.LastUpdateCheck > now) config.LastUpdateCheck = default;
+
+
+                if (now > config.LastUpdateCheck.AddHours(8))
+                {
+                    await CheckForUpdatesAsync();
+                }
                 var nextSync = config.LastSync.AddMinutes(10);
                 if (nextSync > now)
                 {
@@ -68,11 +78,64 @@ Saving to multiple drives is not currently supported.");
                 SaveConfig();
             }
 
-            await DownloadItemAsync(
-                "Topolino1412"
-                //"archiveteam_archivebot_go_20190313130002"
-                //"archiveteam_archivebot_go_20200227040015"
-                );
+        }
+
+        private async static Task CheckForUpdatesAsync()
+        {
+            WriteLog("Checking for updates...");
+            try
+            {
+                if (UserConfiguration != null)
+                {
+                    UserConfiguration.LastUpdateCheck = DateTime.UtcNow;
+                    SaveConfig();
+                }
+                var currentVersion = IaBakVersion;
+                var latestVersion = JsonConvert.DeserializeObject<UpdateCheckInfo>(await httpClient.GetStringAsync("https://raw.githubusercontent.com/antiufo/iabak-sharp/master/latest-version.json"));
+                if (Version.Parse(latestVersion.LatestVersion) <= currentVersion)
+                {
+                    WriteLog("No updates found.");
+                    return;
+                }
+                WriteLog("Downloading update...");
+                var url = Environment.OSVersion.Platform switch
+                {
+                    PlatformID.Win32NT => latestVersion.LatestVersionUrlWindowsX64,
+                    PlatformID.Unix => latestVersion.LatestVersionUrlLinuxX64,
+                    _ => throw new Exception("OS not supported: " + Environment.OSVersion.Platform)
+                };
+
+                var location = Process.GetCurrentProcess().MainModule.FileName;
+                var tempPath = Path.Combine(Path.GetTempPath(), "update-" + Path.GetFileName(location));
+                using (var stream = await httpClient.GetStreamAsync(url))
+                using (var temp = File.Create(tempPath))
+                {
+                    await stream.CopyToAsync(temp);
+                }
+                WriteLog("Replacing old executable...");
+                if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+                {
+
+                    File.Move(location, location + "." + DateTime.UtcNow.ToString("yyyyMMdd-HHmmss") + ".old");
+                    File.Move(tempPath, location);
+                }
+                else
+                {
+                    var chmod = new Mono.Unix.UnixFileInfo(location).FileAccessPermissions;
+                    new Mono.Unix.UnixFileInfo(tempPath).FileAccessPermissions = chmod;
+                    File.Move(tempPath, location, true);
+                }
+
+
+
+                var psi = Process.Start(location);
+                psi.WaitForExit();
+                Environment.Exit(psi.ExitCode);
+            }
+            catch (Exception ex)
+            {
+                WriteLog("An error occured while checking for updates: " + GetInnermostException(ex)); 
+            }
         }
 
         private static void SaveConfig()
@@ -186,6 +249,7 @@ Saving to multiple drives is not currently supported.");
         public static string DataFolder = Path.Combine(RootFolder, "data");
         public static string ConfigFilePath;
         public static string ApplicationDirectory;
+        public static Version IaBakVersion;
         private readonly static HttpClient httpClient = new HttpClient();
         private static string ApiEndpoint = "http://localhost:5000/iabak";
 

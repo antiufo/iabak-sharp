@@ -15,5 +15,6 @@ namespace IaBak.Models
         public string Directory;
         public string Nickname;
         public double LeaveFreeGb;
+        public DateTime LastUpdateCheck;
     }
 }
