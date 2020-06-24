@@ -81,6 +81,24 @@ namespace IaBak.Client
                 }
                 WriteLog("Syncing...");
 
+                foreach (var dir in Directory.EnumerateDirectories(StagingFolder))
+                {
+                    if (!Directory.EnumerateFileSystemEntries(dir).Any())
+                    {
+                        try
+                        {
+                            Directory.Delete(dir);
+                        }
+                        catch
+                        {
+                        }
+                        continue;
+                    }
+                    WriteLog("Found partially downloaded item, resuming: " + dir);
+                    await TryDownloadItemAsync(Path.GetFileName(dir));
+                }
+                return;
+
                 var avail = new DriveInfo(rootDrive).AvailableFreeSpace;
                 var thresholdBytes = (long)(config.LeaveFreeGb * 1024 * 1024 * 1024);
                 if (avail < thresholdBytes)
