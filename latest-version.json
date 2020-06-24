@@ -1,5 +1,5 @@
 ﻿{
     "LatestVersion": "0.1.2",
-    "LatestVersionUrlWindowsX64": "http://localhost/meow.exe",
-    "LatestVersionUrlLinuxX64": "http://localhost/meow"
+    "LatestVersionUrlWindowsX64": "http://localhost/win-x64/publish/IaBak.Client.exe",
+    "LatestVersionUrlLinuxX64": "http://localhost/linux-x64/publish/IaBak.Client"
 }
