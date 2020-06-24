@@ -17,12 +17,11 @@ namespace IaBak.Client
     {
 
         public static Configuration UserConfiguration;
-
+        private static Stream singleInstanceLock;
         static async Task Main(string[] args)
         {
             ApplicationDirectory = GetApplicationPath();
             IaBakVersion = typeof(Program).Assembly.GetName().Version;
-            WriteLog("IaBak-sharp " + IaBakVersion);
 
             if (args.Contains("--version"))
             {
@@ -34,8 +33,19 @@ namespace IaBak.Client
                 Console.WriteLine("For help, see https://github.io/antiufo/iabak-sharp.");
                 return;
             }
-
-            ConfigFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "IaBak-sharp", "Configuration.json");
+            WriteLog("IaBak-sharp " + IaBakVersion);
+            var configDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "IaBak-sharp");
+            Directory.CreateDirectory(configDir);
+            ConfigFilePath = Path.Combine(configDir, "Configuration.json");
+            try
+            {
+                singleInstanceLock = new FileStream(Path.Combine(configDir, "lock"), FileMode.Create, FileAccess.ReadWrite, FileShare.None, 1024, FileOptions.DeleteOnClose);
+            }
+            catch 
+            {
+                WriteLog("Another instance is already running.");
+                Environment.Exit(1);
+            }
             if (!File.Exists(ConfigFilePath))
             {
                 await CheckForUpdatesAsync();
@@ -137,7 +147,7 @@ Saving to multiple drives is not currently supported.");
                     File.Move(tempPath, location, true);
                 }
 
-
+                singleInstanceLock.Close();
 
                 var psi = new ProcessStartInfo(location);
                 foreach (var item in Environment.GetCommandLineArgs().Skip(1))
