@@ -4,6 +4,7 @@ using Shaman.Types;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography;
@@ -130,7 +131,7 @@ Saving to multiple drives is not currently supported.");
                     SaveConfig();
                 }
                 var currentVersion = IaBakVersion;
-                var latestVersion = JsonConvert.DeserializeObject<UpdateCheckInfo>(await httpClient.GetStringAsync("https://raw.githubusercontent.com/antiufo/iabak-sharp/master/latest-version.json"));
+                var latestVersion = JsonConvert.DeserializeObject<UpdateCheckInfo>(await httpClient.GetStringAsync("https://iabak.shaman.io/latest-version.json"));
                 if (Version.Parse(latestVersion.LatestVersion) <= currentVersion)
                 {
                     WriteLog("No updates found.");
@@ -146,11 +147,19 @@ Saving to multiple drives is not currently supported.");
 
                 var location = Process.GetCurrentProcess().MainModule.FileName;
                 var tempPath = Path.Combine(Path.GetTempPath(), "update-" + Path.GetFileName(location));
+                using var ms = new MemoryStream();
                 using (var stream = await httpClient.GetStreamAsync(url))
-                using (var temp = File.Create(tempPath))
                 {
-                    await stream.CopyToAsync(temp);
+                    await stream.CopyToAsync(ms);
                 }
+                ms.Seek(0, SeekOrigin.Begin);
+                using (var zip = new ZipArchive(ms, ZipArchiveMode.Read)) 
+                {
+                    using var entry = zip.Entries.OrderByDescending(x => x.Length).First().Open();
+                    using var temp = File.Create(tempPath);
+                    await entry.CopyToAsync(temp);
+                }
+       
                 WriteLog("Replacing old executable...");
                 if (Environment.OSVersion.Platform == PlatformID.Win32NT)
                 {
