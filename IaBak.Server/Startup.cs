@@ -26,6 +26,7 @@ namespace IaBak.Server
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddLettuceEncrypt();
             services.AddDbContext<IaBakDbContext>(options => options.UseSqlite("Data Source=IaBakServer.sqlite"));
             services.AddControllers();
         }
