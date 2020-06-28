@@ -10,8 +10,8 @@ $winexe = "$root\IaBak.Client\bin\Debug\net5.0\win-x64\publish\iabak-sharp.exe"
 $linuxexe = "$root\IaBak.Client\bin\Debug\net5.0\linux-x64\publish\iabak-sharp"
 $ver = [Diagnostics.FileVersionInfo]::GetVersionInfo($winexe).FileVersion
 
-$destwin = "$root\releases\iabak-sharp-v$ver-windows-x64.zip"
-$destlinux = "$root\releases\iabak-sharp-v$ver-linux-x64.zip"
+$destwin = "$root\IaBak.Server\wwwroot\releases\iabak-sharp-v$ver-windows-x64.zip"
+$destlinux = "$root\IaBak.Server\wwwroot\releases\iabak-sharp-v$ver-linux-x64.zip"
 if((test-path $destwin) -or (test-path $destlinux)){
     throw 'Already existing.'
 }
@@ -21,7 +21,14 @@ if((test-path $destwin) -or (test-path $destlinux)){
 
 @{
     LatestVersion= $ver.ToString();
-    LatestVersionUrlWindowsX64 = "https://github.com/antiufo/iabak-sharp/releases/download/v$ver/iabak-sharp-v$ver-windows-x64.zip";
-    LatestVersionUrlLinuxX64 = "https://github.com/antiufo/iabak-sharp/releases/download/v$ver/iabak-sharp-v$ver-linux-x64.zip";
-} | convertto-json | out-file $root\latest-version.json -Encoding UTF8
+    LatestVersionUrlWindowsX64 = "https://iabak.shaman.io/releases/iabak-sharp-v$ver-windows-x64.zip";
+    LatestVersionUrlLinuxX64 = "https://iabak.shaman.io/releases/iabak-sharp-v$ver-linux-x64.zip";
+    #LatestVersionUrlWindowsX64 = "https://github.com/antiufo/iabak-sharp/releases/download/v$ver/iabak-sharp-v$ver-windows-x64.zip";
+    #LatestVersionUrlLinuxX64 = "https://github.com/antiufo/iabak-sharp/releases/download/v$ver/iabak-sharp-v$ver-linux-x64.zip";
+} | convertto-json | out-file $root\IaBak.Server\wwwroot\latest-version.json -Encoding UTF8
+
+rclone copy $root\IaBak.Server\wwwroot conta:/home/root/Repositories/iabak-sharp/IaBak.Server/wwwroot -vvv --include *.zip --include *.json
+
+
+
 
