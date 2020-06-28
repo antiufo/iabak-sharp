@@ -1,0 +1,7 @@
+﻿{
+    "LatestVersion":  "0.1.6",
+    "--LatestVersionUrlWindowsX64":  "https://github.com/antiufo/iabak-sharp/releases/download/v0.1.5/iabak-sharp-v0.1.5-windows-x64.zip",
+    "--LatestVersionUrlLinuxX64":  "https://github.com/antiufo/iabak-sharp/releases/download/v0.1.5/iabak-sharp-v0.1.5-linux-x64.zip",
+    "LatestVersionUrlWindowsX64":  "https://iabak.shaman.io/releases/iabak-sharp-v0.1.5-windows-x64.zip",
+    "LatestVersionUrlLinuxX64":  "https://iabak.shaman.io/releases/iabak-sharp-v0.1.5-linux-x64.zip"
+}
