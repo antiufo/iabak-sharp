@@ -9,6 +9,13 @@
     }
   },
   "profiles": {
+    "prod":{
+      "commandName": "Project",
+      "applicationUrl": "https://*;http://*",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Production"
+      }
+    },
     "IIS Express": {
       "commandName": "IISExpress",
       "launchBrowser": true,
