@@ -13,6 +13,7 @@ A C# implementation for the [INTERNETARCHIVE.BAK](https://www.archiveteam.org/in
 ### Windows
 * Extract the [zip](https://github.com/antiufo/iabak-sharp/releases/) to some folder.
 * Launch the extracted application.
+* If Windows warns you about the unsigned binary, you can click `More info` -> `Run anyway`.
 
 ### Linux
 * Extract the [zip](https://github.com/antiufo/iabak-sharp/releases/) to some folder.
