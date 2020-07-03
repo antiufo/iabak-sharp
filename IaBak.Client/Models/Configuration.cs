@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -16,5 +17,9 @@ namespace IaBak.Models
         public string Nickname;
         public double LeaveFreeGb;
         public DateTime LastUpdateCheck;
+        public bool RunOnStartup;
+
+        [JsonIgnore]
+        public long LeaveFreeBytes => (long)(LeaveFreeGb * 1024 * 1024 * 1024);
     }
 }

@@ -38,7 +38,7 @@ namespace IaBak.Client
                     _ => throw new Exception("OS not supported: " + Environment.OSVersion.Platform)
                 };
 
-                var location = Process.GetCurrentProcess().MainModule.FileName;
+                var location = Utils.GetApplicationPath();
                 var tempPath = Path.Combine(Path.GetTempPath(), "update-" + Path.GetFileName(location));
                 using var ms = new MemoryStream();
                 using (var stream = await Utils.httpClient.GetStreamAsync(url))

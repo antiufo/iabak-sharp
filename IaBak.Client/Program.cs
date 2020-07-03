@@ -1,4 +1,5 @@
 using IaBak.Models;
+using Microsoft.Win32;
 using Newtonsoft.Json;
 using Shaman.Types;
 using System;
@@ -70,6 +71,9 @@ namespace IaBak.Client
 
             Directory.CreateDirectory(StagingFolder);
             Directory.CreateDirectory(DataFolder);
+
+            SetupAutostart();
+
             var rootDrive = Utils.GetParentDrive(DataFolder).RootDirectory.FullName;
 
 
@@ -138,6 +142,26 @@ To reduce the amount of reserved space, edit Configuration.json and restart iaba
 
         }
 
+        private static void SetupAutostart()
+        {
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+            {
+                var regkey = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", true);
+                if (UserConfiguration.RunOnStartup)
+                {
+                    regkey.SetValue("iabak-sharp", "\"" + Utils.GetApplicationPath() + "\"");
+                }
+                else 
+                {
+                    regkey.DeleteValue("iabak-sharp", false);
+                }
+            }
+            else 
+            { 
+                 // not implemented
+            }
+        }
+
         private static async Task NotifyDownloadedItemsAsync()
         {
             var syncStatusFile = Path.Combine(RootFolder, ".lastsyncstatus-" + UserConfiguration.UserId);
@@ -172,7 +196,6 @@ To reduce the amount of reserved space, edit Configuration.json and restart iaba
         public static string StagingFolder => Path.Combine(RootFolder, "staging");
         public static string DataFolder => Path.Combine(RootFolder, "data");
         public static string ConfigFilePath;
-        public static string ApplicationDirectory;
         public static Version IaBakVersion;
 
 
