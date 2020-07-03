@@ -2,6 +2,8 @@
 
 A C# implementation for the [INTERNETARCHIVE.BAK](https://www.archiveteam.org/index.php?title=INTERNETARCHIVE.BAK) project.
 
+![iabak-sharp screenshot](https://raw.githubusercontent.com/antiufo/iabak-sharp/master/images/iabak-sharp.png)
+
 ## Download
 
 * [Download iabak-sharp (Windows x64)](https://github.com/antiufo/iabak-sharp/releases/download/0.1.9/iabak-sharp-v0.1.9-windows-x64.zip)
