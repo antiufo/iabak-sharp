@@ -1,4 +1,5 @@
 ﻿using IaBak.Models;
+using Microsoft.Win32;
 using Newtonsoft.Json;
 using Shaman.Types;
 using System;
@@ -21,23 +22,35 @@ namespace IaBak.Client
         internal static Stream singleInstanceLock;
         static async Task Main(string[] args)
         {
-            ApplicationDirectory = Utils.GetApplicationPath();
             IaBakVersion = typeof(Program).Assembly.GetName().Version;
+            var configDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "IaBak-sharp");
+            ConfigFilePath = Path.Combine(configDir, "Configuration.json");
 
             if (args.Contains("--version"))
             {
                 Console.WriteLine(IaBakVersion);
                 return;
             }
-            if (args.Contains("--help"))
+            Utils.WriteLog("IaBak-sharp " + IaBakVersion);
+
+            if (new[] { "--help", "-help", "-h", "/?" }.Any(x => args.Contains(x)))
             {
-                Console.WriteLine("For help, see https://github.io/antiufo/iabak-sharp.");
+                Console.WriteLine("https://github.io/antiufo/iabak-sharp");
+                Console.WriteLine();
+                Console.WriteLine("Usage:");
+                Console.WriteLine("   iabak-sharp");
+                Console.WriteLine();
+                if (File.Exists(ConfigFilePath))
+                {
+                    Console.WriteLine($"In order to change your settings, modify {ConfigFilePath}");
+                }
+                else 
+                {
+                    Console.WriteLine("On the first run, you will be guided through the configuration of iabak-sharp.");
+                }
                 return;
             }
-            Utils.WriteLog("IaBak-sharp " + IaBakVersion);
-            var configDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "IaBak-sharp");
             Directory.CreateDirectory(configDir);
-            ConfigFilePath = Path.Combine(configDir, "Configuration.json");
             try
             {
                 singleInstanceLock = new FileStream(Path.Combine(configDir, "lock"), FileMode.Create, FileAccess.ReadWrite, FileShare.None, 1024, FileOptions.DeleteOnClose);
@@ -58,6 +71,9 @@ namespace IaBak.Client
 
             Directory.CreateDirectory(StagingFolder);
             Directory.CreateDirectory(DataFolder);
+
+            SetupAutostart();
+
             var rootDrive = Utils.GetParentDrive(DataFolder).RootDirectory.FullName;
 
 
@@ -78,11 +94,10 @@ namespace IaBak.Client
 
 
                 var avail = new DriveInfo(rootDrive).AvailableFreeSpace;
-                var thresholdBytes = (long)(config.LeaveFreeGb * 1024 * 1024 * 1024);
-                if (avail < thresholdBytes)
+                if (avail < config.LeaveFreeBytes)
                 {
-                    Utils.WriteLog(@$"Not syncing any more items, because less than {new FileSize(thresholdBytes)} are left on disk {rootDrive}.
-To reduce the amount of reserved space, edit Configuration.json and restart iabak-sharp (Saving to multiple drives is not currently supported).");
+                    Utils.WriteLog(@$"Not syncing any more items, because less than {new FileSize(config.LeaveFreeBytes)} are left on disk {rootDrive}.
+To reduce the amount of reserved space, edit {ConfigFilePath} and restart iabak-sharp (Saving to multiple drives is not currently supported). Press CTRL+C to exit.");
                     await Task.Delay(TimeSpan.FromMinutes(60));
                     continue;
                 }
@@ -94,7 +109,7 @@ To reduce the amount of reserved space, edit Configuration.json and restart iaba
                     Utils.WriteLog("Requesting items to retrieve...");
                     response = await Utils.RpcAsync(new JobRequestRequest
                     {
-                        AvailableFreeSpace = avail - thresholdBytes,
+                        AvailableFreeSpace = avail - config.LeaveFreeBytes,
                     });
                 }
                 catch (Exception ex)
@@ -124,6 +139,26 @@ To reduce the amount of reserved space, edit Configuration.json and restart iaba
 
             }
 
+        }
+
+        private static void SetupAutostart()
+        {
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+            {
+                var regkey = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", true);
+                if (UserConfiguration.RunOnStartup)
+                {
+                    regkey.SetValue("iabak-sharp", "\"" + Utils.GetApplicationPath() + "\"");
+                }
+                else 
+                {
+                    regkey.DeleteValue("iabak-sharp", false);
+                }
+            }
+            else 
+            { 
+                 // not implemented
+            }
         }
 
         private static async Task NotifyDownloadedItemsAsync()
@@ -160,7 +195,6 @@ To reduce the amount of reserved space, edit Configuration.json and restart iaba
         public static string StagingFolder => Path.Combine(RootFolder, "staging");
         public static string DataFolder => Path.Combine(RootFolder, "data");
         public static string ConfigFilePath;
-        public static string ApplicationDirectory;
         public static Version IaBakVersion;
 
 

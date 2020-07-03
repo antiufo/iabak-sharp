@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -67,17 +68,7 @@ namespace IaBak.Client
 
         public static string GetApplicationPath()
         {
-            var path = Path.GetDirectoryName(typeof(Program).Assembly.Location);
-
-            string currentDir = path;
-            while (true)
-            {
-                currentDir = Path.GetDirectoryName(currentDir);
-                if (currentDir == null) break;
-                if (Directory.Exists(Path.Combine(currentDir, ".git"))) return currentDir;
-            }
-
-            return path;
+            return Process.GetCurrentProcess().MainModule.FileName;
         }
     }
 }
