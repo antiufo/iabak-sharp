@@ -27,7 +27,7 @@ namespace IaBak.Server
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddLettuceEncrypt();
+            // services.AddLettuceEncrypt();
             services.AddDbContext<IaBakDbContext>(options => options
                 .UseLoggerFactory(SqlLoggerFactory)
                 .UseSqlite("Data Source=IaBakServer.sqlite")
