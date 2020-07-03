@@ -4,8 +4,8 @@ A C# implementation for the [INTERNETARCHIVE.BAK](https://www.archiveteam.org/in
 
 ## Download
 
-* [Download iabak-sharp (Windows x64)](https://github.com/antiufo/iabak-sharp/releases/download/0.1.8/iabak-sharp-v0.1.8-windows-x64.zip)
-* [Download iabak-sharp (Linux x64)](https://github.com/antiufo/iabak-sharp/releases/download/0.1.8/iabak-sharp-v0.1.8-linux-x64.zip)
+* [Download iabak-sharp (Windows x64)](https://github.com/antiufo/iabak-sharp/releases/download/0.1.9/iabak-sharp-v0.1.9-windows-x64.zip)
+* [Download iabak-sharp (Linux x64)](https://github.com/antiufo/iabak-sharp/releases/download/0.1.9/iabak-sharp-v0.1.9-linux-x64.zip)
 
 ## Installation instructions
 ### Windows
@@ -54,7 +54,7 @@ Your settings are stored in `%AppData%\IaBak-sharp\Configuration.json` on Window
 * [ ] Encryption support (for non-public items, would require cooperation with IA)
 * [ ] Support more file retrieval mechanisms (eg. ipfs/torrent?)
 * [ ] Local import of iabak git-annex items
-* [ ] 
+* [ ] Download of user-chosen items/collections
 * [ ] Data restore (auto-update makes this less of an issue)
 * [ ] Download resume (byte granularity)
 
