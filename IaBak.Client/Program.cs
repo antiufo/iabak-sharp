@@ -1,4 +1,4 @@
-﻿using IaBak.Models;
+using IaBak.Models;
 using Newtonsoft.Json;
 using Shaman.Types;
 using System;
@@ -21,23 +21,35 @@ namespace IaBak.Client
         internal static Stream singleInstanceLock;
         static async Task Main(string[] args)
         {
-            ApplicationDirectory = Utils.GetApplicationPath();
             IaBakVersion = typeof(Program).Assembly.GetName().Version;
+            var configDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "IaBak-sharp");
+            ConfigFilePath = Path.Combine(configDir, "Configuration.json");
 
             if (args.Contains("--version"))
             {
                 Console.WriteLine(IaBakVersion);
                 return;
             }
-            if (args.Contains("--help"))
+            Utils.WriteLog("IaBak-sharp " + IaBakVersion);
+
+            if (new[] { "--help", "-help", "-h", "/?" }.Any(x => args.Contains(x)))
             {
-                Console.WriteLine("For help, see https://github.io/antiufo/iabak-sharp.");
+                Console.WriteLine("https://github.io/antiufo/iabak-sharp");
+                Console.WriteLine();
+                Console.WriteLine("Usage:");
+                Console.WriteLine("   iabak-sharp");
+                Console.WriteLine();
+                if (File.Exists(ConfigFilePath))
+                {
+                    Console.WriteLine($"In order to change your settings, modify {ConfigFilePath}");
+                }
+                else 
+                {
+                    Console.WriteLine("On the first run, you will be guided through the configuration of iabak-sharp.");
+                }
                 return;
             }
-            Utils.WriteLog("IaBak-sharp " + IaBakVersion);
-            var configDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "IaBak-sharp");
             Directory.CreateDirectory(configDir);
-            ConfigFilePath = Path.Combine(configDir, "Configuration.json");
             try
             {
                 singleInstanceLock = new FileStream(Path.Combine(configDir, "lock"), FileMode.Create, FileAccess.ReadWrite, FileShare.None, 1024, FileOptions.DeleteOnClose);
