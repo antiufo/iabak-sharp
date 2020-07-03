@@ -42,7 +42,10 @@ namespace IaBak.Server
                 app.UseDeveloperExceptionPage();
             }
 
-            app.UseHttpsRedirection();
+            // app.UseHttpsRedirection();
+
+            app.UseStaticFiles();
+            app.UseDefaultFiles();
 
             app.UseRouting();
 
