@@ -77,6 +77,11 @@ namespace IaBak.Client
             var rootDrive = Utils.GetParentDrive(DataFolder).RootDirectory.FullName;
 
 
+            if (DateTime.UtcNow > config.LastUpdateCheck.AddHours(2))
+            {
+                await Updates.CheckForUpdatesAsync();
+            }
+
             await InternetArchive.ResumeUnfinishedDownloadsAsync();
             await NotifyDownloadedItemsAsync();
 
