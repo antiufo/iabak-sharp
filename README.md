@@ -13,6 +13,7 @@ A C# implementation for the [INTERNETARCHIVE.BAK](https://www.archiveteam.org/in
 * [X] Disk space checks
 * [X] Self-update
 * [X] Job assignment
+* [X] Download resume (file granularity)
 
 ### Future improvements
 * [ ] Cronjob
@@ -20,6 +21,7 @@ A C# implementation for the [INTERNETARCHIVE.BAK](https://www.archiveteam.org/in
 * [ ] Encryption support (non-public items)
 * [ ] Support more file retrieval mechanisms (eg. ipfs/torrent?)
 * [ ] Local import of iabak git-annex items?
+* [ ] Download resume (byte granularity)
 
 ## Supported OSes
 Supports Windows, Linux. Command line application only, no GUI.
