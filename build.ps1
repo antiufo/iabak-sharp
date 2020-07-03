@@ -27,7 +27,11 @@ if((test-path $destwin) -or (test-path $destlinux)){
     #LatestVersionUrlLinuxX64 = "https://github.com/antiufo/iabak-sharp/releases/download/v$ver/iabak-sharp-v$ver-linux-x64.zip";
 } | convertto-json | out-file $root\IaBak.Server\wwwroot\latest-version.json -Encoding UTF8
 
-rclone copy $root\IaBak.Server\wwwroot conta:/home/root/Repositories/iabak-sharp/IaBak.Server/wwwroot -vvv --include *.zip --include *.json
+
+# Separately: zip files must be there before json is copied!
+$destfolder = "conta:/root/Repositories/iabak-sharp/IaBak.Server/wwwroot"
+rclone copy $root\IaBak.Server\wwwroot $destfolder -vvv --include *.zip; CheckExitCode
+rclone copy $root\IaBak.Server\wwwroot $destfolder -vvv --include *.json; CheckExitCode
 
 
 
