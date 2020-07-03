@@ -8,7 +8,7 @@ namespace IaBak.Models
 {
     public class Configuration
     {
-        public DateTime LastSync;
+        //public DateTime LastSync;
         public long UserId;
         public string UserEmail;
         public string UserSecretKey;

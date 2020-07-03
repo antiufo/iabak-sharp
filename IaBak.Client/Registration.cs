@@ -14,6 +14,15 @@ namespace IaBak.Client
 
         public async static Task UserRegistrationAsync()
         {
+            try
+            {
+                await Utils.RpcAsync(new CheckServerStatusRequest());
+            }
+            catch (Exception ex)
+            {
+                Utils.WriteLog("Unable to contact iabak-sharp servers. Please try again later. Error: " + Utils.GetInnermostException(ex));
+                Environment.Exit(1);
+            }
             Console.WriteLine("Welcome to IaBak-sharp.");
             Console.WriteLine();
             Console.Write("Enter your email address (optional, will *not* be publicly visible): ");
@@ -60,7 +69,7 @@ namespace IaBak.Client
             };
 
             Directory.CreateDirectory(config.Directory);
-            var response = await Utils.RpcAsync<RegistrationResponse>(new RegistrationRequest
+            var response = await Utils.RpcAsync(new RegistrationRequest
             {
                 Email = config.UserEmail,
                 Nickname = config.Nickname,

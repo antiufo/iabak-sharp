@@ -66,7 +66,7 @@ namespace IaBak.Client
                 }
                 catch (Exception ex)
                 {
-                    Utils.WriteLog($"Download failed for {archiveItem}/{relativePath}: " + Utils.GetInnermostException(ex));
+                    Utils.WriteLog($"Download failed for {archiveItem}/{relativePath}: " + Utils.GetMessageForException(ex));
 
                     if (attempts == 10) throw;
 
@@ -164,7 +164,7 @@ namespace IaBak.Client
             }
             catch (Exception ex)
             {
-                Utils.WriteLog($"Failed download for {identifier}: " + Utils.GetInnermostException(ex));
+                Utils.WriteLog($"Failed download for {identifier}: " + Utils.GetMessageForException(ex));
             }
         }
 

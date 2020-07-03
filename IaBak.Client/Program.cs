@@ -62,10 +62,14 @@ namespace IaBak.Client
             Directory.CreateDirectory(StagingFolder);
             Directory.CreateDirectory(DataFolder);
             var rootDrive = Utils.GetParentDrive(DataFolder).RootDirectory.FullName;
+
+
+            await InternetArchive.ResumeUnfinishedDownloadsAsync();
+            await NotifyDownloadedItemsAsync();
+
             while (true)
             {
                 var now = DateTime.UtcNow;
-                if (config.LastSync > now) config.LastSync = default;
                 if (config.LastUpdateCheck > now) config.LastUpdateCheck = default;
 
 
@@ -74,54 +78,79 @@ namespace IaBak.Client
                     await Updates.CheckForUpdatesAsync();
                 }
 
-                await InternetArchive.ResumeUnfinishedDownloadsAsync();
-
-                var nextSync = config.LastSync.AddMinutes(10);
-                if (nextSync > now)
-                {
-                    var delay = nextSync - now;
-                    Utils.WriteLog($"Next sync in {delay.TotalMinutes:0} minutes.");
-                    await Task.Delay(delay);
-                }
-
-
-                
-
-                Utils.WriteLog("Syncing...");
-
 
 
                 var avail = new DriveInfo(rootDrive).AvailableFreeSpace;
                 var thresholdBytes = (long)(config.LeaveFreeGb * 1024 * 1024 * 1024);
                 if (avail < thresholdBytes)
                 {
-                    Utils.WriteLog(@$"Not syncing any other items, because less than {new FileSize(thresholdBytes)} are left on disk {rootDrive}.
-To reduce the amount of reserved space, edit Configuration.json.
-Saving to multiple drives is not currently supported.");
-                    config.LastSync = now;
-                    SaveConfig();
+                    Utils.WriteLog(@$"Not syncing any more items, because less than {new FileSize(thresholdBytes)} are left on disk {rootDrive}.
+To reduce the amount of reserved space, edit Configuration.json and restart iabak-sharp (Saving to multiple drives is not currently supported).");
+                    await Task.Delay(TimeSpan.FromMinutes(60));
                     continue;
                 }
 
 
+                JobRequestResponse response;
+                try
+                {
+                    Utils.WriteLog("Requesting items to retrieve...");
+                    response = await Utils.RpcAsync(new JobRequestRequest
+                    {
+                        AvailableFreeSpace = avail - thresholdBytes,
+                    });
+                }
+                catch (Exception ex)
+                {
+                    Utils.WriteLog("Unable to request items to retrieve. Will retry soon. Error: " + Utils.GetMessageForException(ex));
+                    await Task.Delay(TimeSpan.FromMinutes(1));
+                    continue;
+                }
 
-                //var respose = await RpcAsync<SyncResponse>(new SyncRequest
-                //{
-                //    UserId = config.UserId,
-                //    SecretKey = config.UserSecretKey,
-                //    GainedItems = new List<string> { "gatto", Guid.NewGuid().ToString() },
-                //    LostItems = new List<string> { "topo" },
-                //    AvailableFreeSpace = avail - thresholdBytes
 
-                //});
+                if (response.Suggestions != null && response.Suggestions.Any())
+                {
+                    var first = response.Suggestions.First();
+                    await InternetArchive.TryDownloadItemAsync(first.ItemName);
+                    await NotifyDownloadedItemsAsync();
+                }
+                else 
+                {
+                    Utils.WriteLog("No new items available for download right now.");
+                }
 
-                //RpcAsync(new SyncRequest {  })
+                if (response.RetryInSeconds > 0)
+                {
+                    Utils.WriteLog($"Waiting {response.RetryInSeconds} seconds...");
+                    await Task.Delay(TimeSpan.FromSeconds(response.RetryInSeconds));
+                }
 
-                SaveConfig();
             }
 
         }
 
+        private static async Task NotifyDownloadedItemsAsync()
+        {
+            var syncStatusFile = Path.Combine(RootFolder, ".lastsyncstatus-" + UserConfiguration.UserId);
+            var lastSyncItems = File.Exists(syncStatusFile) ? File.ReadAllLines(syncStatusFile, Encoding.UTF8).Select(x => x.Trim()).Where(x => !string.IsNullOrEmpty(x)) : new string[] { };
+
+            var currentItems = Directory.EnumerateDirectories(DataFolder).Select(x => Path.GetFileName(x)).ToList();
+            var lostItems = lastSyncItems.Except(currentItems).ToList();
+            var gainedItems = currentItems.Except(lastSyncItems).ToList();
+            if (lostItems.Any() || gainedItems.Any())
+            {
+                Utils.WriteLog($"Notifying server of {gainedItems.Count} newly obtained item(s) and {lostItems.Count} removed one(s).");
+                try
+                {
+                    await Utils.RpcAsync(new SyncRequest { GainedItems = gainedItems, LostItems = lostItems });
+                    File.WriteAllLines(syncStatusFile, currentItems, Encoding.UTF8);
+                }
+                catch (Exception ex)
+                {
+                    Utils.WriteLog("Unable to notify the server, will retry later. Error: " + Utils.GetMessageForException(ex));
+                }
+            }
+        }
 
         public static void SaveConfig()
         {

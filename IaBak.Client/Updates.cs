@@ -80,7 +80,7 @@ namespace IaBak.Client
             }
             catch (Exception ex)
             {
-                Utils.WriteLog("An error occured while checking for updates: " + Utils.GetInnermostException(ex));
+                Utils.WriteLog("An error occured while checking for updates: " + Utils.GetMessageForException(ex));
             }
         }
 

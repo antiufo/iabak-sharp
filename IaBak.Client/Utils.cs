@@ -16,6 +16,12 @@ namespace IaBak.Client
 
         internal readonly static HttpClient httpClient = new HttpClient();
 
+
+        public static string GetMessageForException(Exception ex)
+        {
+            return GetInnermostException(ex).Message;
+        }
+
         public static Exception GetInnermostException(Exception ex)
         {
             while (ex.InnerException != null)
@@ -33,14 +39,19 @@ namespace IaBak.Client
 
         private static string ApiEndpoint = "https://iabak.shaman.io/iabak";
 
-        public static async Task<TResponse> RpcAsync<TResponse>(RequestBase request) where TResponse : ResponseBase
+        public static async Task<TResponse> RpcAsync<TResponse>(RequestBase<TResponse> request) where TResponse : ResponseBase
         {
+            if (Program.UserConfiguration != null)
+            {
+                request.UserId = Program.UserConfiguration.UserId;
+                request.SecretKey = Program.UserConfiguration.UserSecretKey;
+            }
             var method = request.GetType().Name;
             if (!method.EndsWith("Request")) throw new ArgumentException();
             method = method.Substring(0, method.Length - "Request".Length);
             var httpResponse = await Utils.httpClient.PostAsync(ApiEndpoint + "/" + method, new StringContent(JsonConvert.SerializeObject(request), Encoding.UTF8, "application/json"));
             httpResponse.EnsureSuccessStatusCode();
-
+            request.Version = Program.IaBakVersion.ToString();
             var response = JsonConvert.DeserializeObject<TResponse>(await httpResponse.Content.ReadAsStringAsync());
             if (response.Error != null) throw new Exception(response.Error);
             return response;
