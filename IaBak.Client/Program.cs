@@ -56,9 +56,6 @@ namespace IaBak.Client
             var config = JsonConvert.DeserializeObject<Configuration>(File.ReadAllText(ConfigFilePath));
             UserConfiguration = config;
 
-            StagingFolder = Path.Combine(config.Directory, "staging");
-            DataFolder = Path.Combine(config.Directory, "data");
-
             Directory.CreateDirectory(StagingFolder);
             Directory.CreateDirectory(DataFolder);
             var rootDrive = Utils.GetParentDrive(DataFolder).RootDirectory.FullName;
@@ -159,9 +156,9 @@ To reduce the amount of reserved space, edit Configuration.json and restart iaba
         }
 
 
-        public static string RootFolder = @"E:\IaBak";
-        public static string StagingFolder = Path.Combine(RootFolder, "staging");
-        public static string DataFolder = Path.Combine(RootFolder, "data");
+        public static string RootFolder => UserConfiguration?.Directory;
+        public static string StagingFolder => Path.Combine(RootFolder, "staging");
+        public static string DataFolder => Path.Combine(RootFolder, "data");
         public static string ConfigFilePath;
         public static string ApplicationDirectory;
         public static Version IaBakVersion;
