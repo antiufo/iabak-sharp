@@ -82,6 +82,7 @@ namespace IaBak.Server.Controllers
         {
             var suggestion = await _dbContext.ArchiveItems
                 .Where(x => x.CurrentRedundancy == 0 && !_dbContext.RecentSuggestions.Any(y => y.ItemId == x.Identifier))
+                .OrderByDescending(x => x.Priority)
                 .FirstOrDefaultAsync();
 
             var user = await GetUserAsync(request);
