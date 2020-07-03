@@ -1,4 +1,4 @@
-using IaBak.Models;
+﻿using IaBak.Models;
 using Newtonsoft.Json;
 using Shaman.Types;
 using System;
@@ -18,10 +18,10 @@ namespace IaBak.Client
     {
 
         public static Configuration UserConfiguration;
-        private static Stream singleInstanceLock;
+        internal static Stream singleInstanceLock;
         static async Task Main(string[] args)
         {
-            ApplicationDirectory = GetApplicationPath();
+            ApplicationDirectory = Utils.GetApplicationPath();
             IaBakVersion = typeof(Program).Assembly.GetName().Version;
 
             if (args.Contains("--version"))
@@ -34,7 +34,7 @@ namespace IaBak.Client
                 Console.WriteLine("For help, see https://github.io/antiufo/iabak-sharp.");
                 return;
             }
-            WriteLog("IaBak-sharp " + IaBakVersion);
+            Utils.WriteLog("IaBak-sharp " + IaBakVersion);
             var configDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "IaBak-sharp");
             Directory.CreateDirectory(configDir);
             ConfigFilePath = Path.Combine(configDir, "Configuration.json");
@@ -44,13 +44,13 @@ namespace IaBak.Client
             }
             catch 
             {
-                WriteLog("Another instance is already running.");
+                Utils.WriteLog("Another instance is already running.");
                 Environment.Exit(1);
             }
             if (!File.Exists(ConfigFilePath))
             {
-                await CheckForUpdatesAsync();
-                await UserRegistrationAsync();
+                await Updates.CheckForUpdatesAsync();
+                await Registration.UserRegistrationAsync();
             }
 
             var config = JsonConvert.DeserializeObject<Configuration>(File.ReadAllText(ConfigFilePath));
@@ -61,7 +61,7 @@ namespace IaBak.Client
 
             Directory.CreateDirectory(StagingFolder);
             Directory.CreateDirectory(DataFolder);
-            var rootDrive = GetParentDrive(DataFolder).RootDirectory.FullName;
+            var rootDrive = Utils.GetParentDrive(DataFolder).RootDirectory.FullName;
             while (true)
             {
                 var now = DateTime.UtcNow;
@@ -71,40 +71,31 @@ namespace IaBak.Client
 
                 if (now > config.LastUpdateCheck.AddHours(8))
                 {
-                    await CheckForUpdatesAsync();
+                    await Updates.CheckForUpdatesAsync();
                 }
+
+                await InternetArchive.ResumeUnfinishedDownloadsAsync();
+
                 var nextSync = config.LastSync.AddMinutes(10);
                 if (nextSync > now)
                 {
                     var delay = nextSync - now;
-                    WriteLog($"Next sync in {delay.TotalMinutes:0} minutes.");
+                    Utils.WriteLog($"Next sync in {delay.TotalMinutes:0} minutes.");
                     await Task.Delay(delay);
                 }
-                WriteLog("Syncing...");
 
-                foreach (var dir in Directory.EnumerateDirectories(StagingFolder))
-                {
-                    if (!Directory.EnumerateFileSystemEntries(dir).Any())
-                    {
-                        try
-                        {
-                            Directory.Delete(dir);
-                        }
-                        catch
-                        {
-                        }
-                        continue;
-                    }
-                    WriteLog("Found partially downloaded item, resuming: " + dir);
-                    await TryDownloadItemAsync(Path.GetFileName(dir));
-                }
-                return;
+
+                
+
+                Utils.WriteLog("Syncing...");
+
+
 
                 var avail = new DriveInfo(rootDrive).AvailableFreeSpace;
                 var thresholdBytes = (long)(config.LeaveFreeGb * 1024 * 1024 * 1024);
                 if (avail < thresholdBytes)
                 {
-                    WriteLog(@$"Not syncing any other items, because less than {new FileSize(thresholdBytes)} are left on disk {rootDrive}.
+                    Utils.WriteLog(@$"Not syncing any other items, because less than {new FileSize(thresholdBytes)} are left on disk {rootDrive}.
 To reduce the amount of reserved space, edit Configuration.json.
 Saving to multiple drives is not currently supported.");
                     config.LastSync = now;
@@ -113,6 +104,17 @@ Saving to multiple drives is not currently supported.");
                 }
 
 
+
+                //var respose = await RpcAsync<SyncResponse>(new SyncRequest
+                //{
+                //    UserId = config.UserId,
+                //    SecretKey = config.UserSecretKey,
+                //    GainedItems = new List<string> { "gatto", Guid.NewGuid().ToString() },
+                //    LostItems = new List<string> { "topo" },
+                //    AvailableFreeSpace = avail - thresholdBytes
+
+                //});
+
                 //RpcAsync(new SyncRequest {  })
 
                 SaveConfig();
@@ -120,373 +122,23 @@ Saving to multiple drives is not currently supported.");
 
         }
 
-        private async static Task CheckForUpdatesAsync()
-        {
-            WriteLog("Checking for updates...");
-            try
-            {
-                if (UserConfiguration != null)
-                {
-                    UserConfiguration.LastUpdateCheck = DateTime.UtcNow;
-                    SaveConfig();
-                }
-                var currentVersion = IaBakVersion;
-                var latestVersion = JsonConvert.DeserializeObject<UpdateCheckInfo>(await httpClient.GetStringAsync("https://iabak.shaman.io/latest-version.json"));
-                if (Version.Parse(latestVersion.LatestVersion) <= currentVersion)
-                {
-                    WriteLog("No updates found.");
-                    return;
-                }
-                WriteLog("Downloading update...");
-                var url = Environment.OSVersion.Platform switch
-                {
-                    PlatformID.Win32NT => latestVersion.LatestVersionUrlWindowsX64,
-                    PlatformID.Unix => latestVersion.LatestVersionUrlLinuxX64,
-                    _ => throw new Exception("OS not supported: " + Environment.OSVersion.Platform)
-                };
 
-                var location = Process.GetCurrentProcess().MainModule.FileName;
-                var tempPath = Path.Combine(Path.GetTempPath(), "update-" + Path.GetFileName(location));
-                using var ms = new MemoryStream();
-                using (var stream = await httpClient.GetStreamAsync(url))
-                {
-                    await stream.CopyToAsync(ms);
-                }
-                ms.Seek(0, SeekOrigin.Begin);
-                using (var zip = new ZipArchive(ms, ZipArchiveMode.Read)) 
-                {
-                    using var entry = zip.Entries.OrderByDescending(x => x.Length).First().Open();
-                    using var temp = File.Create(tempPath);
-                    await entry.CopyToAsync(temp);
-                }
-       
-                WriteLog("Replacing old executable...");
-                if (Environment.OSVersion.Platform == PlatformID.Win32NT)
-                {
-
-                    File.Move(location, location + "." + DateTime.UtcNow.ToString("yyyyMMdd-HHmmss") + ".old");
-                    File.Move(tempPath, location);
-                }
-                else
-                {
-                    var chmod = new Mono.Unix.UnixFileInfo(location).FileAccessPermissions;
-                    new Mono.Unix.UnixFileInfo(tempPath).FileAccessPermissions = chmod;
-                    File.Move(tempPath, location, true);
-                }
-
-                singleInstanceLock.Close();
-
-                var psi = new ProcessStartInfo(location);
-                foreach (var item in Environment.GetCommandLineArgs().Skip(1))
-                {
-                    psi.ArgumentList.Add(item);
-                }
-                var ps = Process.Start(psi);
-                ps.WaitForExit();
-                Environment.Exit(ps.ExitCode);
-            }
-            catch (Exception ex)
-            {
-                WriteLog("An error occured while checking for updates: " + GetInnermostException(ex)); 
-            }
-        }
-
-        private static void SaveConfig()
+        public static void SaveConfig()
         {
             Directory.CreateDirectory(Path.GetDirectoryName(ConfigFilePath));
             File.WriteAllText(ConfigFilePath, JsonConvert.SerializeObject(UserConfiguration, Formatting.Indented));
         }
 
-        private static DriveInfo GetParentDrive(string folder)
-        {
-            return DriveInfo.GetDrives()
-                .OrderByDescending(x => x.RootDirectory.FullName)
-                .First(x => folder.StartsWith(x.RootDirectory.FullName));
-        }
 
-        private static string GetApplicationPath()
-        {
-            var path = Path.GetDirectoryName(typeof(Program).Assembly.Location);
-
-            string currentDir = path;
-            while (true)
-            {
-                currentDir = Path.GetDirectoryName(currentDir);
-                if (currentDir == null) break;
-                if (Directory.Exists(Path.Combine(currentDir, ".git"))) return currentDir;
-            }
-
-            return path;
-        }
-
-        private async static Task UserRegistrationAsync()
-        {
-            Console.WriteLine("Welcome to IaBak-sharp.");
-            Console.WriteLine();
-            Console.Write("Enter your email address (optional, will *not* be publicly visible): ");
-            var email = NormalizeString(Console.ReadLine());
-            Console.Write("Enter a nickname (optional, *will* be publicly visible): ");
-            var nickname = NormalizeString(Console.ReadLine());
-            var defaultDir = Environment.OSVersion.Platform == PlatformID.Win32NT ? @"C:\IaBak" : Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + "/iabak";
-            string customDir;
-            while (true)
-            {
-                Console.Write($"Where do you want to store your IA backups? [{defaultDir}]: ");
-                customDir = NormalizeString(Console.ReadLine()) ?? defaultDir;
-                if (!Path.IsPathRooted(customDir))
-                {
-                    Console.WriteLine("Please enter an absolute path.");
-                    continue;
-                }
-
-                break;
-            }
-            const double defaultLeaveFree = 10;
-            double customLeaveFree;
-            while (true)
-            {
-                Console.Write($"How much space to you want to leave free for other uses, in GB? [{defaultLeaveFree}]: ");
-                var customLeaveFreeStr = NormalizeString(Console.ReadLine()) ?? defaultLeaveFree.ToString();
-                if (!double.TryParse(customLeaveFreeStr, out customLeaveFree))
-                {
-                    Console.WriteLine("Invalid number.");
-                    continue;
-                }
-                break;
-            }
-
-
-
-            var config = new Configuration
-            {
-                UserEmail = email,
-                Nickname = nickname,
-                UserSecretKey = GenerateSecretKey(),
-                Directory = customDir,
-                LeaveFreeGb = customLeaveFree
-            };
-
-            Directory.CreateDirectory(config.Directory);
-            var response = await RpcAsync<RegistrationResponse>(new RegistrationRequest
-            {
-                Email = config.UserEmail,
-                Nickname = config.Nickname,
-                SecretKey = config.UserSecretKey,
-            });
-
-            config.UserId = response.AssignedUserId;
-            UserConfiguration = config;
-            SaveConfig();
-
-            Console.WriteLine();
-            Console.WriteLine($"Thank you. If you want to modify these settings in the future, edit '{ConfigFilePath}'.");
-            Console.WriteLine();
-
-        }
-
-        private static string GenerateSecretKey()
-        {
-            using var rng = RandomNumberGenerator.Create();
-            var bytes = new byte[16];
-            rng.GetBytes(bytes);
-            return Convert.ToBase64String(bytes);
-        }
-
-        private static string NormalizeString(string str)
-        {
-            if (string.IsNullOrWhiteSpace(str)) return null;
-            return str.Trim();
-        }
         public static string RootFolder = @"E:\IaBak";
         public static string StagingFolder = Path.Combine(RootFolder, "staging");
         public static string DataFolder = Path.Combine(RootFolder, "data");
         public static string ConfigFilePath;
         public static string ApplicationDirectory;
         public static Version IaBakVersion;
-        private readonly static HttpClient httpClient = new HttpClient();
-        private static string ApiEndpoint = "http://localhost:5000/iabak";
-
-        public static async Task<TResponse> RpcAsync<TResponse>(RequestBase request) where TResponse : ResponseBase
-        {
-            var method = request.GetType().Name;
-            if (!method.EndsWith("Request")) throw new ArgumentException();
-            method = method.Substring(0, method.Length - "Request".Length);
-            var httpResponse = await httpClient.PostAsync(ApiEndpoint + "/" + method, new StringContent(JsonConvert.SerializeObject(request), Encoding.UTF8, "application/json"));
-            httpResponse.EnsureSuccessStatusCode();
-
-            var response = JsonConvert.DeserializeObject<TResponse>(await httpResponse.Content.ReadAsStringAsync());
-            if (response.Error != null) throw new Exception(response.Error);
-            return response;
-        }
 
 
-        public static async Task TryDownloadItemAsync(string identifier)
-        {
-           
-            try
-            {
-                await DownloadItemAsync(identifier);
-            }
-            catch (Exception ex)
-            {
-                WriteLog($"Failed download for {identifier}: " + GetInnermostException(ex));
-            }
-        }
 
       
-
-        private static Exception GetInnermostException(Exception ex)
-        {
-            while (ex.InnerException != null)
-            {
-                ex = ex.InnerException;
-            }
-            return ex;
-        }
-
-        public static async Task DownloadItemAsync(string identifier)
-        {
-            var itemStagingDir = Path.Combine(StagingFolder, identifier);
-            var itemDoneDir = Path.Combine(DataFolder, identifier);
-            if (Directory.Exists(itemDoneDir)) return;
-            Directory.CreateDirectory(itemStagingDir);
-
-
-            var filesXml = identifier + "_files.xml";
-            await DownloadFileToStagingAsync(identifier, filesXml, null);
-
-            var files = ReadFilesXml(Path.Combine(itemStagingDir, filesXml));
-            if (files.files.Any(x => x.@private == true))
-                throw new Exception($"Unable to download the item, because one or more files in it are not public.");
-            var nonDerivative = files.files.Where(x => x.source != "derivative").ToList();
-            WriteLog($"Size of {identifier}: {new FileSize(nonDerivative.Sum(x => x.size ?? 0))}");
-            foreach (var item in nonDerivative)
-            {
-                await RetryDownloadFileToStagingAsync(identifier, item.name, item);
-            }
-            foreach (var item in nonDerivative)
-            {
-                // So that we detect if the user manually deletes the staging folder while we continue to download the rest of the item.
-                if (!File.Exists(Path.Combine(itemStagingDir, item.name)))
-                    throw new Exception("One or more of the previously downloaded files was subsequentially found to be missing. Aborting download of the current item.");
-            }
-            Directory.Move(itemStagingDir, itemDoneDir);
-            WriteLog($"Download of {identifier} completed.");
-        }
-
-        public static FilesXml ReadFilesXml(string path)
-        {
-            var ser = new System.Xml.Serialization.XmlSerializer(typeof(FilesXml));
-            using var stream = File.Open(path, FileMode.Open);
-            return (FilesXml)ser.Deserialize(stream);
-        }
-
-        public static async Task RetryDownloadFileToStagingAsync(string archiveItem, string relativePath, FileXml metadata)
-        {
-            var delay = 10;
-            var attempts = 0;
-            while (true)
-            {
-                attempts++;
-                try
-                {
-                    await DownloadFileToStagingAsync(archiveItem, relativePath, metadata);
-                    return;
-                }
-                catch (Exception ex)
-                {
-                    WriteLog($"Download failed for {archiveItem}/{relativePath}: " + GetInnermostException(ex));
-
-                    if (attempts == 10) throw;
-                    
-                    WriteLog($"Retrying in {delay} seconds.");
-                    delay *= 2;
-                }
-            }
-        }
-
-
-        public static async Task DownloadFileToStagingAsync(string archiveItem, string relativePath, FileXml metadata)
-        {
-            var expectedSize = metadata?.size;
-            var outputPath = Path.Combine(StagingFolder, archiveItem, relativePath);
-            if (File.Exists(outputPath)) return;
-            var tempPath = outputPath + ".tmp";
-            Directory.CreateDirectory(Path.GetDirectoryName(outputPath));
-            WriteLog($"Retrieving {archiveItem}/{relativePath}" + (expectedSize != null ? $" ({new FileSize(expectedSize.Value)})" : null));
-            using var response = await httpClient.GetAsync($"https://archive.org/download/{archiveItem}/{relativePath}", HttpCompletionOption.ResponseHeadersRead);
-            response.EnsureSuccessStatusCode();
-            var lastModified = response.Content.Headers.LastModified;
-            if (lastModified == null) throw new Exception($"Server did not return a Last-Modified header for '{archiveItem}/{relativePath}'.");
-            var lastProgressPrint = Stopwatch.StartNew();
-            using var stream = await response.Content.ReadAsStreamAsync();
-            using (var tempStream = File.Create(tempPath))
-            {
-                var buffer = new byte[1 * 1024 * 1024];
-                var totalRead = 0L;
-                while (true)
-                {
-                    var read = await stream.ReadAsync(buffer);
-                    if (read == 0) break;
-                    await tempStream.WriteAsync(buffer, 0, read);
-                    totalRead += read;
-                    if (lastProgressPrint.ElapsedMilliseconds > 30_000)
-                    {
-                        WriteLog("  " + new FileSize(totalRead) + " of " + (expectedSize != null ? new FileSize(expectedSize.Value).ToString() : "unknown"));
-                        lastProgressPrint.Restart();
-                    }
-                }
-            }
-            var actualFileLength = new FileInfo(tempPath).Length;
-            if (expectedSize != null && actualFileLength != expectedSize)
-                throw new Exception($"Unexpected size for item '{archiveItem}/{relativePath}': {expectedSize} according to metadata, but retrieved {actualFileLength}.");
-
-            if (metadata != null)
-            {
-                CheckHash(tempPath, metadata);
-            }
-
-            File.SetLastWriteTimeUtc(tempPath, lastModified.Value.UtcDateTime);
-            File.Move(tempPath, outputPath, overwrite: true);
-        }
-
-        private static void CheckHash(string tempPath, FileXml metadata)
-        {
-            if (CheckHash(tempPath, metadata.sha1, () => SHA1.Create())) return;
-            if (CheckHash(tempPath, metadata.md5, () => MD5.Create())) return;
-            // TODO: CRC is not built into .net. Are there archive items without neither sha1, nor md5?
-            WriteLog($"Warning! No hash information is available for ${metadata.name}.");
-        }
-
-        private static bool CheckHash(string tempPath, string expectedHash, Func<HashAlgorithm> createHashAlgo)
-        {
-            if (expectedHash == null) return false;
-            var actualHash = GetFileHashAsString(tempPath, createHashAlgo());
-            if (actualHash != expectedHash) throw new Exception($"Hash mismatch for {tempPath}.");
-            return true;
-        }
-
-        private static string ByteArrayToString(byte[] ba)
-        {
-            var hex = new StringBuilder(ba.Length * 2);
-            foreach (byte b in ba)
-                hex.AppendFormat("{0:x2}", b);
-            return hex.ToString();
-        }
-        private static string GetFileHashAsString(string path, HashAlgorithm algorithm)
-        {
-
-            using (algorithm)
-            using (var file = File.OpenRead(path))
-            {
-                var hash = algorithm.ComputeHash(file);
-                return ByteArrayToString(hash);
-            };
-        }
-
-        private static void WriteLog(string text)
-        {
-            Console.Error.WriteLine(text);
-        }
     }
 }
