@@ -22,16 +22,19 @@ namespace IaBak.Server
         }
 
         public IConfiguration Configuration { get; }
+        public static readonly ILoggerFactory SqlLoggerFactory = LoggerFactory.Create(builder => { builder.AddConsole(); });
 
-        // This method gets called by the runtime. Use this method to add services to the container.
+
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddLettuceEncrypt();
-            services.AddDbContext<IaBakDbContext>(options => options.UseSqlite("Data Source=IaBakServer.sqlite"));
+            services.AddDbContext<IaBakDbContext>(options => options
+                .UseLoggerFactory(SqlLoggerFactory)
+                .UseSqlite("Data Source=IaBakServer.sqlite")
+                .EnableSensitiveDataLogging()); ;
             services.AddControllers();
         }
 
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             if (env.IsDevelopment())
