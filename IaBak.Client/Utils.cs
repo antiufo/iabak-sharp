@@ -38,6 +38,7 @@ namespace IaBak.Client
         }
 
         private static string ApiEndpoint = "https://iabak.shaman.io/iabak";
+        //private static string ApiEndpoint = "http://localhost:5000/iabak";
 
         public static async Task<TResponse> RpcAsync<TResponse>(RequestBase<TResponse> request) where TResponse : ResponseBase
         {
