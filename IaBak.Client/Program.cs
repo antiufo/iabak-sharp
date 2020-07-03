@@ -1,4 +1,4 @@
-using IaBak.Models;
+﻿using IaBak.Models;
 using Microsoft.Win32;
 using Newtonsoft.Json;
 using Shaman.Types;
@@ -94,11 +94,10 @@ namespace IaBak.Client
 
 
                 var avail = new DriveInfo(rootDrive).AvailableFreeSpace;
-                var thresholdBytes = (long)(config.LeaveFreeGb * 1024 * 1024 * 1024);
-                if (avail < thresholdBytes)
+                if (avail < config.LeaveFreeBytes)
                 {
-                    Utils.WriteLog(@$"Not syncing any more items, because less than {new FileSize(thresholdBytes)} are left on disk {rootDrive}.
-To reduce the amount of reserved space, edit Configuration.json and restart iabak-sharp (Saving to multiple drives is not currently supported).");
+                    Utils.WriteLog(@$"Not syncing any more items, because less than {new FileSize(config.LeaveFreeBytes)} are left on disk {rootDrive}.
+To reduce the amount of reserved space, edit {ConfigFilePath} and restart iabak-sharp (Saving to multiple drives is not currently supported). Press CTRL+C to exit.");
                     await Task.Delay(TimeSpan.FromMinutes(60));
                     continue;
                 }
@@ -110,7 +109,7 @@ To reduce the amount of reserved space, edit Configuration.json and restart iaba
                     Utils.WriteLog("Requesting items to retrieve...");
                     response = await Utils.RpcAsync(new JobRequestRequest
                     {
-                        AvailableFreeSpace = avail - thresholdBytes,
+                        AvailableFreeSpace = avail - config.LeaveFreeBytes,
                     });
                 }
                 catch (Exception ex)
