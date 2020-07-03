@@ -11,7 +11,7 @@
   "profiles": {
     "prod":{
       "commandName": "Project",
-      "applicationUrl": "https://*;http://*",
+      "applicationUrl": "http://*:5000",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Production"
       }
