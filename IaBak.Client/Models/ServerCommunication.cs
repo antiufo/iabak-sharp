@@ -7,11 +7,15 @@ using System.Threading.Tasks;
 namespace IaBak.Models
 {
 
-    public abstract class RequestBase<TResponse> where TResponse : ResponseBase
+    public abstract class RequestBase
     {
         public long UserId { get; set; }
         public string SecretKey { get; set; }
         public string Version { get; set; }
+    }
+
+    public abstract class RequestBase<TResponse> : RequestBase where TResponse : ResponseBase
+    {
     }
 
     public abstract class ResponseBase
