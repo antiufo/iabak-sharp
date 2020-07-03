@@ -12,7 +12,7 @@ A C# implementation for the [INTERNETARCHIVE.BAK](https://www.archiveteam.org/in
 * [X] User registration
 * [X] Disk space checks
 * [X] Self-update
-* [ ] Job assignment
+* [X] Job assignment
 
 ### Future improvements
 * [ ] Cronjob
