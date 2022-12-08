@@ -8,7 +8,7 @@
 	</PropertyGroup>
 	<ItemGroup>
 		<PackageReference Include="Shaman.FileSize" Version="1.0.1.2" />
-		<PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
 		<PackageReference Include="Mono.Posix.NETStandard" Version="5.20.1-preview" />
 		<PackageReference Include="Microsoft.Win32.Registry" Version="4.7"/>
 	</ItemGroup>
